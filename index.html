@@ -1,272 +1,145 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>حاسبة الطاقة الشمسية</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f0f0f0;
+      font-family: 'Arial', sans-serif;
+      direction: rtl;
       margin: 0;
+      padding: 0;
+      display: flex;
+    }
+
+    .main-container {
+      flex: 3;
       padding: 20px;
     }
 
-    .layout {
-      display: flex;
-      flex-direction: row;
-      justify-content: center;
-      align-items: flex-start;
-      gap: 20px;
-      max-width: 1200px;
-      margin: auto;
-    }
-
     .map-container {
-      width: 320px;
-      background: white;
-      padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px #ccc;
+      flex: 1;
+      border-right: 1px solid #ccc;
+      padding: 10px;
+      background-color: #f9f9f9;
     }
 
     #map {
       height: 300px;
       width: 100%;
-      border-radius: 10px;
       margin-top: 10px;
-    }
-
-    .container {
-      flex: 1;
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px #ccc;
-    }
-
-    h2, h3 {
-      color: #1e88e5;
+      border: 1px solid #ccc;
     }
 
     label {
-      font-weight: bold;
-      margin-top: 10px;
       display: block;
+      margin-top: 10px;
     }
 
-    input, select {
+    input {
       width: 100%;
-      padding: 6px;
+      padding: 5px;
       margin-top: 5px;
     }
 
     table {
       width: 100%;
-      border-collapse: collapse;
       margin-top: 10px;
+      border-collapse: collapse;
     }
 
     th, td {
       border: 1px solid #ccc;
       padding: 5px;
-      text-align: center;
+    }
+
+    #results {
+      background-color: #f1f1f1;
+      margin-top: 20px;
+      padding: 10px;
     }
 
     button {
-      margin-top: 15px;
-      padding: 10px;
-      background: #1e88e5;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background: #1565c0;
-    }
-
-    .results {
-      margin-top: 20px;
-      background: #e3f2fd;
-      padding: 15px;
-      border-radius: 8px;
-    }
-
-    .info {
       margin-top: 10px;
+      padding: 5px 10px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
 
-  <div class="layout">
+  <!-- المحتوى الرئيسي -->
+  <div class="main-container">
+    <h2>🔆 حاسبة الطاقة الشمسية</h2>
 
-    <!-- الخريطة -->
-    <div class="map-container">
-      <h3>📍 أدخل المنطقة</h3>
-      <div id="map"></div>
-      <div class="info">
-        <p>☀️ الإشعاع الشمسي: <span id="irradiationValue">--</span></p>
-      </div>
+    <!-- اختيار طريقة الإدخال -->
+    <label><input type="radio" name="inputMode" value="direct" checked> إدخال مباشر للاستهلاك</label>
+    <label><input type="radio" name="inputMode" value="devices"> إدخال حسب الأجهزة</label>
+
+    <!-- إدخال مباشر -->
+    <div id="directInputs">
+      <label>الاستهلاك اليومي (kWh): <input type="number" id="dailyUsage"></label>
+      <label>أو الاستهلاك الشهري (kWh): <input type="number" id="monthlyUsage"></label>
     </div>
 
-    <!-- النموذج -->
-    <div class="container">
-      <h2>حاسبة الطاقة الشمسية للمنازل والمزارع</h2>
-
-      <label>طريقة الإدخال</label>
-      <select id="mode">
-        <option value="direct">استهلاك يومي مباشر (kWh)</option>
-        <option value="devices">قائمة الأجهزة</option>
-      </select>
-
-      <div id="directInput">
-        <label>الاستهلاك اليومي بالكيلوواط/ساعة</label>
-        <input type="number" id="dailyUsage" placeholder="مثلاً: 10">
-      </div>
-
-      <div id="deviceInput" style="display:none;">
-        <h3>قائمة الأجهزة</h3>
-        <table id="deviceTable">
-          <thead>
-            <tr>
-              <th>الجهاز</th>
-              <th>العدد</th>
-              <th>القدرة (واط)</th>
-              <th>مدة التشغيل (ساعة)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><input type="text" value="ثلاجة"></td>
-              <td><input type="number" value="1"></td>
-              <td><input type="number" value="150"></td>
-              <td><input type="number" value="8"></td>
-            </tr>
-          </tbody>
-        </table>
-        <button onclick="addRow()">➕ إضافة جهاز</button>
-      </div>
-
-      <h3>بيانات اللوح الشمسي (اختياري)</h3>
-      <label>اسم اللوح</label><input type="text" id="panelName">
-      <label>القدرة (W)</label><input type="number" id="panelPower">
-      <label>الجهد (V)</label><input type="number" id="panelVolt">
-      <label>السعر (دج)</label><input type="number" id="panelPrice">
-
-      <h3>بيانات البطارية (اختياري)</h3>
-      <label>نوع البطارية</label><input type="text" id="batName">
-      <label>السعة (Ah)</label><input type="number" id="batCapacity">
-      <label>الجهد (V)</label><input type="number" id="batVolt">
-      <label>الكفاءة (%)</label><input type="number" id="batEff" value="80">
-      <label>السعر (دج)</label><input type="number" id="batPrice">
-
-      <button onclick="calculate()">احسب الآن ⚡</button>
-
-      <div class="results" id="results"></div>
+    <!-- إدخال حسب الأجهزة -->
+    <div id="deviceInputs" style="display: none;">
+      <table id="devicesTable">
+        <tr>
+          <th>الجهاز</th>
+          <th>القدرة (W)</th>
+          <th>عدد الساعات</th>
+          <th>العدد</th>
+        </tr>
+        <tr>
+          <td><input type="text" placeholder="ثلاجة"></td>
+          <td><input type="number"></td>
+          <td><input type="number"></td>
+          <td><input type="number"></td>
+        </tr>
+      </table>
+      <button onclick="addDevice()">➕ أضف جهاز</button>
     </div>
+
+    <hr>
+
+    <!-- جهد النظام -->
+    <label>🔋 جهد النظام (V): <input type="number" id="systemVoltage" value="24"></label>
+
+    <!-- مواصفات الألواح -->
+    <label>🔌 مواصفات اللوح الشمسي:</label>
+    <input type="number" id="panelWatt" placeholder="القدرة (W)" value="300">
+    <input type="number" id="panelVoltage" placeholder="الجهد (V)" value="18">
+    <input type="number" id="panelPrice" placeholder="السعر (DA)" value="150">
+
+    <!-- مواصفات البطاريات -->
+    <label>🔋 مواصفات البطارية:</label>
+    <input type="number" id="batteryCapacity" placeholder="السعة (Ah)" value="200">
+    <input type="number" id="batteryVoltage" placeholder="الجهد (V)" value="12">
+    <input type="number" id="batteryPrice" placeholder="السعر (DA)" value="200">
+
+    <hr>
+
+    <!-- نتائج الموقع -->
+    <p id="selectedLocation">📍 اختر موقعًا من الخريطة</p>
+    <p id="irradiationValue">☀️ الإشعاع الشمسي: غير معروف</p>
+    <button onclick="calculate()">🔍 حساب</button>
+
+    <!-- عرض النتائج -->
+    <div id="results"></div>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- الخريطة -->
+  <div class="map-container">
+    <h4>🌍 أدخل المنطقة:</h4>
+    <div id="map"></div>
+  </div>
 
-  <script>
-    let solarIrradiation = 5.5;
-
-    function initMap() {
-      const map = L.map('map').setView([28.0, 2.0], 5);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-      }).addTo(map);
-
-      let marker;
-      map.on('click', function (e) {
-        const { lat, lng } = e.latlng;
-        if (marker) marker.remove();
-        marker = L.marker([lat, lng]).addTo(map);
-        fetchIrradiation(lat, lng);
-      });
-    }
-
-    async function fetchIrradiation(lat, lon) {
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=solar_radiation_sum&timezone=auto`;
-      try {
-        const res = await fetch(url);
-        const data = await res.json();
-        const irradiation = data.daily?.solar_radiation_sum?.[0];
-        if (irradiation) {
-          solarIrradiation = irradiation;
-          document.getElementById('irradiationValue').innerText = irradiation.toFixed(2);
-        } else {
-          alert("⚠️ لم يتم العثور على بيانات الإشعاع.");
-        }
-      } catch (err) {
-        alert('⚠️ فشل في تحميل بيانات الإشعاع الشمسي');
-        console.error(err);
-      }
-    }
-
-    window.onload = initMap;
-
-    document.getElementById('mode').addEventListener('change', () => {
-      const mode = document.getElementById('mode').value;
-      document.getElementById('directInput').style.display = (mode === 'direct') ? 'block' : 'none';
-      document.getElementById('deviceInput').style.display = (mode === 'devices') ? 'block' : 'none';
-    });
-
-    function addRow() {
-      const table = document.querySelector('#deviceTable tbody');
-      const row = table.insertRow();
-      for (let i = 0; i < 4; i++) {
-        const cell = row.insertCell();
-        const input = document.createElement('input');
-        input.type = 'text';
-        cell.appendChild(input);
-      }
-    }
-
-    function calculate() {
-      const mode = document.getElementById('mode').value;
-      let dailyConsumption = 0;
-
-      if (mode === 'direct') {
-        dailyConsumption = parseFloat(document.getElementById('dailyUsage').value) || 0;
-      } else {
-        document.querySelectorAll('#deviceTable tbody tr').forEach(row => {
-          const [_, qty, watt, hours] = row.querySelectorAll('input');
-          dailyConsumption += (parseFloat(qty.value) || 0) * (parseFloat(watt.value) || 0) * (parseFloat(hours.value) || 0);
-        });
-        dailyConsumption /= 1000;
-      }
-
-      const panelPower = parseFloat(document.getElementById('panelPower').value) || 330;
-      const panelVolt = parseFloat(document.getElementById('panelVolt').value) || 36;
-      const panelPrice = parseFloat(document.getElementById('panelPrice').value) || 25000;
-
-      const batVolt = parseFloat(document.getElementById('batVolt').value) || 12;
-      const batCapacity = parseFloat(document.getElementById('batCapacity').value) || 200;
-      const batEff = parseFloat(document.getElementById('batEff').value) || 80;
-      const batPrice = parseFloat(document.getElementById('batPrice').value) || 45000;
-
-      const panelDailyProduction = (panelPower * solarIrradiation) / 1000;
-      const numPanels = Math.ceil(dailyConsumption / panelDailyProduction);
-
-      const batteryEnergy = dailyConsumption * 1000 / (batEff / 100);
-      const batteryTotalCapacity = batVolt * batCapacity;
-      const numBatteries = Math.ceil(batteryEnergy / batteryTotalCapacity);
-
-      document.getElementById('results').innerHTML = `
-        <h3>🔍 النتائج:</h3>
-        <p>❖ الاستهلاك اليومي: <strong>${dailyConsumption.toFixed(2)} kWh</strong></p>
-        <p>☀ الإشعاع الشمسي حسب موقعك: <strong>${solarIrradiation.toFixed(2)} kWh/m²/day</strong></p>
-        <p>🔋 عدد الألواح المطلوبة: <strong>${numPanels}</strong></p>
-        <p>🔋 عدد البطاريات المطلوبة: <strong>${numBatteries}</strong></p>
-        <p>💰 تكلفة الألواح: <strong>${(panelPrice * numPanels).toLocaleString()} دج</strong></p>
-        <p>💰 تكلفة البطاريات: <strong>${(batPrice * numBatteries).toLocaleString()} دج</strong></p>
-        <p>💰 التكلفة الإجمالية: <strong>${(panelPrice * numPanels + batPrice * numBatteries).toLocaleString()} دج</strong></p>
-      `;
-    }
-  </script>
+  <!-- تحميل Leaflet -->
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <!-- ملف الجافا سكربت -->
+  <script src="script.js"></script>
 </body>
 </html>
