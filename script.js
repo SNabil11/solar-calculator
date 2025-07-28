@@ -27,27 +27,28 @@ window.onload = function () {
   });
 };
 
-async function fetchIrradiation_OpenMeteo(lat, lon) {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=shortwave_radiation_sum&timezone=auto`;
-
-  try {
-    const res = await fetch(url);
-    const data = await res.json();
-    const values = data.daily.shortwave_radiation_sum;
-
-    if (values && values.length > 0) {
-      // نحسب المتوسط من 7 أيام القادمة
-      const avg = values.slice(0, 7).reduce((a, b) => a + b, 0) / 7;
-      solarIrradiation = avg;
-      document.getElementById('irradiationValue').innerText = `${avg.toFixed(2)} kWh/m²/day`;
-    } else {
-      throw new Error("لا توجد بيانات إشعاع متاحة.");
-    }
-  } catch (err) {
-    alert("❌ تعذر تحميل بيانات الإشعاع من Open-Meteo.");
-    console.error(err);
+function getSolarIrradiation(lat, lon) {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=solar_radiation_sum&timezone=auto`;
+  
+    fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        const irradiationArray = data?.daily?.solar_radiation_sum;
+        if (irradiationArray && irradiationArray.length > 0) {
+          const irradiation = irradiationArray[0];
+          document.getElementById('irradiationValue').innerText = irradiation.toFixed(2) + " kWh/m²/day";
+          solarIrradiation = irradiation;
+        } else {
+          document.getElementById('irradiationValue').innerText = "0";
+          alert("⚠️ لم يتم العثور على بيانات الإشعاع الشمسي لهذه المنطقة.");
+        }
+      })
+      .catch(error => {
+        console.error("⚠️ خطأ في جلب بيانات الإشعاع:", error);
+        alert("⚠️ فشل تحميل بيانات الإشعاع الشمسي.");
+      });
   }
-}
+  
 
 function calculate() {
   let dailyEnergy = 0;
