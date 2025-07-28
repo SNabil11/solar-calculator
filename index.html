@@ -3,8 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <title>حاسبة الطاقة الشمسية</title>
-
-  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
   <style>
@@ -18,21 +16,25 @@
     .layout {
       display: flex;
       flex-direction: row;
+      justify-content: center;
+      align-items: flex-start;
       gap: 20px;
-      justify-content: space-between;
       max-width: 1200px;
       margin: auto;
     }
 
     .map-container {
       width: 320px;
+      background: white;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #ccc;
     }
 
     #map {
       height: 300px;
       width: 100%;
       border-radius: 10px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.2);
       margin-top: 10px;
     }
 
@@ -107,7 +109,7 @@
       <div id="map"></div>
       <div class="info">
         <p>☀️ الإشعاع الشمسي: <span id="irradiationValue">--</span></p>
-<div id="map" style="height: 350px; width: 100%; margin-bottom: 20px;"></div>
+      </div>
     </div>
 
     <!-- النموذج -->
@@ -167,7 +169,6 @@
     </div>
   </div>
 
-  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <script>
@@ -196,7 +197,7 @@
         const irradiation = data.daily?.solar_radiation_sum?.[0];
         if (irradiation) {
           solarIrradiation = irradiation;
-          document.getElementById('irradiance').innerText = irradiation.toFixed(2);
+          document.getElementById('irradiationValue').innerText = irradiation.toFixed(2);
         } else {
           alert("⚠️ لم يتم العثور على بيانات الإشعاع.");
         }
@@ -239,12 +240,10 @@
         dailyConsumption /= 1000;
       }
 
-      // بيانات اللوح
       const panelPower = parseFloat(document.getElementById('panelPower').value) || 330;
       const panelVolt = parseFloat(document.getElementById('panelVolt').value) || 36;
       const panelPrice = parseFloat(document.getElementById('panelPrice').value) || 25000;
 
-      // بيانات البطارية
       const batVolt = parseFloat(document.getElementById('batVolt').value) || 12;
       const batCapacity = parseFloat(document.getElementById('batCapacity').value) || 200;
       const batEff = parseFloat(document.getElementById('batEff').value) || 80;
