@@ -1,14 +1,47 @@
-// قيمة الإشعاع الشمسي الافتراضية
-let solarIrradiation = 5.5; // kWh/m²/day
+// إنشاء الخريطة
+const map = L.map('map').setView([28.0, 2.0], 5); // الجزائر
 
-// وظيفة مساعدة للحصول على قيمة رقمية من عنصر
-function getFloat(id) {
-  return parseFloat(document.getElementById(id)?.value || 0);
+// تحميل الخريطة من OpenStreetMap
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors'
+}).addTo(map);
+
+// متغير لتخزين الإشعاع
+let solarIrradiation = null;
+
+// دالة لجلب الإشعاع الشمسي
+function getSolarIrradiation(lat, lon) {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=solar_radiation_sum&timezone=auto`;
+
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      const irradiation = data.daily?.solar_radiation_sum?.[0];
+      if (irradiation) {
+        document.getElementById('irradiationValue').innerText = irradiation.toFixed(2) + " kWh/m²/day";
+        solarIrradiation = irradiation;
+      } else {
+        alert("لم يتم العثور على بيانات الإشعاع!");
+      }
+    })
+    .catch(error => {
+      console.error("خطأ في جلب بيانات الإشعاع:", error);
+      alert("فشل تحميل بيانات الإشعاع الشمسي.");
+    });
 }
 
-function calculate() {
-  const mode = document.querySelector('input[name="mode"]:checked')?.value;
-  let dailyEnergy = 0;
+// عند النقر على الخريطة
+map.on('click', function (e) {
+  const lat = e.latlng.lat.toFixed(4);
+  const lon = e.latlng.lng.toFixed(4);
+
+  // تحديث العرض
+  document.getElementById('selectedLocation').innerText = `الموقع المحدد: ${lat}, ${lon}`;
+
+  // جلب الإشعاع
+  getSolarIrradiation(lat, lon);
+});
+
 
   // حساب الاستهلاك اليومي حسب نوع الإدخال
   if (mode === 'direct') {
@@ -66,7 +99,7 @@ function calculate() {
     <p><strong>تكلفة البطاريات:</strong> ${totalBatteryCost} دج</p>
     <p><strong>إجمالي الإشعاع الشمسي:</strong> ${solarIrradiation.toFixed(2)} kWh/m²/day</p>
   `;
-}
+
 
 // خريطة Leaflet لتحديد الموقع
 function initMap() {
