@@ -18,37 +18,49 @@ let solarIrradiation = null;
 
 // جلب بيانات الإشعاع من PVGIS
 async function getSolarIrradiationFromPVGIS(lat, lon) {
-  const url = `https://re.jrc.ec.europa.eu/api/v5_2/PVcalc?lat=${lat}&lon=${lon}&peakpower=1&loss=14&angle=30&aspect=0&outputformat=json`;
-
-  try {
-    const response = await fetch(url);
-    const data = await response.json();
-
-    const irradiation = data?.outputs?.totals?.fixed?.E_d;
-
-    if (irradiation) {
-      solarIrradiation = irradiation;
-      document.getElementById('irradiationValue').innerText = irradiation.toFixed(2) + " kWh/m²/day";
-    } else {
-      throw new Error("لم يتم العثور على بيانات الإشعاع.");
+    const url = `https://re.jrc.ec.europa.eu/api/v5_2/seriescalc?lat=${lat}&lon=${lon}&startyear=2020&endyear=2020&pvtechchoice=crystSi&peakpower=1&loss=14&outputformat=json`;
+  
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
+  
+      // المحاولة أولاً مع البيانات اليومية
+      if (data.outputs?.daily_profile?.length > 0) {
+        let total = 0;
+        let count = 0;
+        data.outputs.daily_profile.forEach(day => {
+          if (typeof day.PEpv === 'number') {
+            total += day.PEpv;
+            count++;
+          }
+        });
+        if (count > 0) {
+          solarIrradiation = total / count;
+          document.getElementById('irradiationValue').innerText = solarIrradiation.toFixed(2) + " kWh/m²/day (يومي)";
+          return;
+        }
+      }
+  
+      // إن لم توجد يومية، نلجأ إلى الشهرية
+      if (data.outputs?.monthly?.length > 0) {
+        let totalMonthly = 0;
+        data.outputs.monthly.forEach(month => {
+          if (typeof month.E_d === 'number') {
+            totalMonthly += month.E_d;
+          }
+        });
+        solarIrradiation = totalMonthly / data.outputs.monthly.length;
+        document.getElementById('irradiationValue').innerText = solarIrradiation.toFixed(2) + " kWh/m²/day (شهري)";
+        return;
+      }
+  
+      alert("⚠️ لم يتم العثور على بيانات الإشعاع الشمسي.");
+    } catch (error) {
+      console.error("❌ خطأ في الاتصال بـ PVGIS:", error);
+      alert("❌ حدث خطأ أثناء جلب بيانات الإشعاع الشمسي.");
     }
-  } catch (error) {
-    console.error("خطأ في جلب بيانات PVGIS:", error);
-    alert("⚠️ لم يتم العثور على بيانات الإشعاع من PVGIS.");
   }
-}
-
-// عند النقر على الخريطة
-map.on('click', function (e) {
-  const lat = e.latlng.lat.toFixed(4);
-  const lon = e.latlng.lng.toFixed(4);
-
-  document.getElementById('selectedLocation').innerText = `📍 الموقع المحدد: ${lat}, ${lon}`;
-
-  // جلب الإشعاع من PVGIS
-  getSolarIrradiationFromPVGIS(lat, lon);
-});
-}
+}  
   
 
 function calculate() {
