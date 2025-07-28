@@ -5,49 +5,50 @@ function getFloat(id) {
 }
 
 window.onload = function () {
-  const map = L.map('map').setView([28.0, 2.0], 5);
+  // إنشاء الخريطة
+const map = L.map('map').setView([28.0, 2.0], 5);
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors'
-  }).addTo(map);
+// تحميل خريطة OpenStreetMap
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors'
+}).addTo(map);
 
-  let marker = null;
+// متغير عام لتخزين قيمة الإشعاع
+let solarIrradiation = null;
 
-  map.on('click', function (e) {
-    const lat = e.latlng.lat.toFixed(4);
-    const lon = e.latlng.lng.toFixed(4);
+// جلب بيانات الإشعاع من PVGIS
+async function getSolarIrradiationFromPVGIS(lat, lon) {
+  const url = `https://re.jrc.ec.europa.eu/api/v5_2/PVcalc?lat=${lat}&lon=${lon}&peakpower=1&loss=14&angle=30&aspect=0&outputformat=json`;
 
-    if (marker) marker.remove();
-    marker = L.marker([lat, lon]).addTo(map);
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
 
-    document.getElementById('selectedLocation').innerText = `📍 الموقع: ${lat}, ${lon}`;
+    const irradiation = data?.outputs?.totals?.fixed?.E_d;
 
-    // جلب الإشعاع من Open-Meteo
-    fetchIrradiation_OpenMeteo(lat, lon);
-  });
-};
-
-function getSolarIrradiation(lat, lon) {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=solar_radiation_sum&timezone=auto`;
-  
-    fetch(url)
-      .then(response => response.json())
-      .then(data => {
-        const irradiationArray = data?.daily?.solar_radiation_sum;
-        if (irradiationArray && irradiationArray.length > 0) {
-          const irradiation = irradiationArray[0];
-          document.getElementById('irradiationValue').innerText = irradiation.toFixed(2) + " kWh/m²/day";
-          solarIrradiation = irradiation;
-        } else {
-          document.getElementById('irradiationValue').innerText = "0";
-          alert("⚠️ لم يتم العثور على بيانات الإشعاع الشمسي لهذه المنطقة.");
-        }
-      })
-      .catch(error => {
-        console.error("⚠️ خطأ في جلب بيانات الإشعاع:", error);
-        alert("⚠️ فشل تحميل بيانات الإشعاع الشمسي.");
-      });
+    if (irradiation) {
+      solarIrradiation = irradiation;
+      document.getElementById('irradiationValue').innerText = irradiation.toFixed(2) + " kWh/m²/day";
+    } else {
+      throw new Error("لم يتم العثور على بيانات الإشعاع.");
+    }
+  } catch (error) {
+    console.error("خطأ في جلب بيانات PVGIS:", error);
+    alert("⚠️ لم يتم العثور على بيانات الإشعاع من PVGIS.");
   }
+}
+
+// عند النقر على الخريطة
+map.on('click', function (e) {
+  const lat = e.latlng.lat.toFixed(4);
+  const lon = e.latlng.lng.toFixed(4);
+
+  document.getElementById('selectedLocation').innerText = `📍 الموقع المحدد: ${lat}, ${lon}`;
+
+  // جلب الإشعاع من PVGIS
+  getSolarIrradiationFromPVGIS(lat, lon);
+});
+}
   
 
 function calculate() {
